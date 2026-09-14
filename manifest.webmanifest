@@ -1,0 +1,17 @@
+{
+  "name": "กฎใช้ชีวิตร่วมกัน",
+  "short_name": "กฎเรา",
+  "description": "เช็กลิสต์กติกาคู่รัก คิดค่าปรับอัตโนมัติ สะสมเป็นเงินทริป",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7FA",
+  "theme_color": "#C2185B",
+  "lang": "th",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
