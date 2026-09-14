@@ -144,12 +144,21 @@ input,select{font:inherit}
   <div class="login">
     <div style="font-size:46px">🤝</div>
     <h1>กฎใช้ชีวิตร่วมกัน</h1>
-    <p>ใส่อีเมลเพื่อรับรหัส 6 หลัก</p>
+    <p id="authHint">ใส่อีเมลและรหัสผ่าน</p>
     <div class="form" style="text-align:left">
-      <div id="stepEmail">
+      <div id="stepPw">
         <label>อีเมล</label>
-        <input type="email" id="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        <input type="email" id="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
+        <label style="margin-top:10px">รหัสผ่าน</label>
+        <input type="password" id="pw" autocomplete="current-password" placeholder="••••••••">
+        <button class="btn wide" id="signIn" style="margin-top:12px">เข้าสู่ระบบ</button>
+        <button class="btn ghost wide" id="toOtp" style="margin-top:8px">เข้าด้วยรหัส 6 หลักทางอีเมลแทน</button>
+      </div>
+      <div id="stepEmail" class="hide">
+        <label>อีเมล</label>
+        <input type="email" id="email2" inputmode="email" autocomplete="email" placeholder="you@example.com">
         <button class="btn wide" id="sendOtp" style="margin-top:10px">ส่งรหัสเข้าอีเมล</button>
+        <button class="btn ghost wide" id="toPw" style="margin-top:8px">กลับไปใช้รหัสผ่าน</button>
       </div>
       <div id="stepOtp" class="hide">
         <label>รหัส 6 หลักที่ส่งไปทางอีเมล</label>
@@ -1122,19 +1131,49 @@ function switchTab(tab){
 
 /* ══════════════ ล็อกอิน ══════════════ */
 let pendingEmail='';
+function authStep(which){
+  ['Pw','Email','Otp'].forEach(n=> $('#step'+n).classList.toggle('hide', n!==which));
+  $('#authMsg').textContent='';
+  $('#authHint').textContent = which==='Pw' ? 'ใส่อีเมลและรหัสผ่าน' : 'ใส่อีเมลเพื่อรับรหัส 6 หลัก';
+}
+$('#toOtp').onclick=()=>{ $('#email2').value=$('#email').value; authStep('Email'); };
+$('#toPw').onclick =()=>authStep('Pw');
+
+async function doSignIn(){
+  const em=$('#email').value.trim().toLowerCase(), pw=$('#pw').value;
+  if(!/.+@.+\..+/.test(em)) return toast('ใส่อีเมลให้ถูกต้อง');
+  if(pw.length<6) return toast('รหัสผ่านอย่างน้อย 6 ตัว');
+  $('#signIn').disabled=true; $('#authMsg').textContent='กำลังเข้าสู่ระบบ…';
+  const {error}=await sb.auth.signInWithPassword({email:em, password:pw});
+  $('#signIn').disabled=false;
+  if(error){
+    $('#authMsg').textContent = /credential/i.test(error.message)
+      ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : 'เข้าไม่ได้: '+error.message;
+    return;
+  }
+  boot();
+}
+$('#signIn').onclick=doSignIn;
+$('#pw').addEventListener('keydown', e=>{ if(e.key==='Enter') doSignIn(); });
+
 $('#sendOtp').onclick=async()=>{
-  const em=$('#email').value.trim().toLowerCase();
+  const em=$('#email2').value.trim().toLowerCase();
   if(!/.+@.+\..+/.test(em)) return toast('ใส่อีเมลให้ถูกต้อง');
   $('#sendOtp').disabled=true; $('#authMsg').textContent='กำลังส่งรหัส…';
   const {error}=await sb.auth.signInWithOtp({email:em});
   $('#sendOtp').disabled=false;
-  if(error){ $('#authMsg').textContent='ส่งไม่สำเร็จ: '+error.message; return; }
+  if(error){
+    $('#authMsg').textContent = /rate limit/i.test(error.message)
+      ? 'ส่งอีเมลบ่อยเกินไป (โควตาฟรี 2 ฉบับ/ชม.) — รอสักครู่ หรือใช้รหัสผ่านแทน'
+      : 'ส่งไม่สำเร็จ: '+error.message;
+    return;
+  }
   pendingEmail=em;
-  $('#stepEmail').classList.add('hide'); $('#stepOtp').classList.remove('hide');
-  $('#authMsg').textContent='ส่งรหัสไปที่ '+em+' แล้ว (เช็กกล่องสแปมด้วย)';
+  authStep('Otp');
+  $('#authMsg').textContent='ส่งรหัสไปที่ '+em+' แล้ว — ใช้ "ตัวเลข 6 หลัก" ในอีเมล อย่ากดลิงก์ (เช็กกล่องสแปมด้วย)';
   $('#otp').focus();
 };
-$('#backEmail').onclick=()=>{ $('#stepOtp').classList.add('hide'); $('#stepEmail').classList.remove('hide'); $('#authMsg').textContent=''; };
+$('#backEmail').onclick=()=>authStep('Email');
 $('#verifyOtp').onclick=async()=>{
   const token=$('#otp').value.trim();
   if(token.length<6) return toast('ใส่รหัส 6 หลัก');
